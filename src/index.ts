@@ -6,6 +6,9 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { AmbientLight, AxesHelper, GridHelper, Object3D } from "three";
 
 let carRotation = 0;
+const horizontalMaxSpeed = 6;
+const verticalMaxSpeed = 70;
+const cameraDistance = 7;
 
 async function main() {
 	const loader = new GLTFLoader();
@@ -37,7 +40,7 @@ async function main() {
 	const update = { w: 0, s: 0, a: 0, d: 0 };
 
 	body.addEventListener("keydown", (e) => {
-		update[e.key] = 1;
+		update[e.key] = 0.5;
 	});
 	body.addEventListener("click", () => {});
 	body.addEventListener("keyup", (e) => {
@@ -58,23 +61,30 @@ async function main() {
 	addFloor(scene);
 
 	const updateFn = () => {
-		const speedHorizontalModifier = Math.min(speed.vertical / 10, 1);
+		const speedHorizontalModifier = Math.min(Math.abs(speed.vertical / 30), 1);
+		const verticalDelta = update.w || -update.s;
+		const horizontalDelta = (update.a || -update.d) * 0.4;
 
-		if (update.w || update.s) {
-			const newSpeed = speed.vertical + (update.w || -update.s);
-			speed.vertical = Math.sign(newSpeed) * Math.max(Math.abs(newSpeed), 20);
+		if (verticalDelta) {
+			const newSpeed = speed.vertical + verticalDelta;
+			if (verticalDelta < 0) speed.vertical = newSpeed;
+			speed.vertical = Math.sign(newSpeed) * Math.min(Math.abs(newSpeed), verticalMaxSpeed);
 		} else speed.vertical *= 0.9;
-		if (update.a || update.d) speed.horizontal = speed.horizontal + (update.a || -update.d);
+		if (horizontalDelta) speed.horizontal = speed.horizontal + horizontalDelta;
 		else speed.horizontal *= 0.85;
 
-		if (Math.abs(speed.horizontal) > 8) speed.horizontal = Math.sign(speed.horizontal) * 8;
+		if (Math.abs(speed.horizontal) > horizontalMaxSpeed)
+			speed.horizontal = Math.sign(speed.horizontal) * horizontalMaxSpeed;
 		speed.horizontal *= speedHorizontalModifier;
 
 		if (items.car) {
 			const pos = items.car.position;
-			const distance = 7;
 			camera.position.lerp(
-				new T.Vector3(pos.x + distance * Math.sin(carRotation), pos.y + 3, pos.z + distance * Math.cos(carRotation)),
+				new T.Vector3(
+					pos.x + cameraDistance * Math.sin(carRotation),
+					pos.y + 3,
+					pos.z + cameraDistance * Math.cos(carRotation)
+				),
 				1
 			);
 			camera.lookAt(items.car.position);
